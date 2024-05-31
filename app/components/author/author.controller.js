@@ -1,5 +1,6 @@
 const authorService = require("./author.services");
 const asyncHandler = require("express-async-handlr");
+const AuthControllerFunctions = require("./authControllerFunctions");
 
 /**
  * Author Registration
@@ -59,3 +60,7 @@ exports.profile = asyncHandler(async (req, res) => {
     },
   });
 });
+
+class AuthController extends AuthControllerFunctions {
+  
+}

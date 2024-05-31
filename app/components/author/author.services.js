@@ -1,12 +1,16 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Author = require("../../models/authorModel");
+const AuthControllerFunctions = require("./authControllerFunctions");
 
 /**
  * @class AuthorService
  * @desc Service class for handling operations related to authors registration, login and their books.
  */
-class AuthorService {
+class AuthorService extends AuthControllerFunctions {
+  constructor() {
+    super();
+  }
   /**
    *
    * @param {Object} data Contains author's registration data
@@ -14,17 +18,8 @@ class AuthorService {
    * @desc Register the author if author does not already exist
    */
   async register(data) {
-    const { name, email, password, age } = data;
-    if (!name || !email || !password || !age) {
-      res.status(400);
-      throw new Error("All fileds are mandatory");
-    }
-
-    const authorExist = await Author.findOne({ email });
-    if (authorExist) {
-      res.status(400);
-      throw new Error("Author already exist");
-    }
+    super.validateRegistrationData(data);
+    super.ifAuthorExists(data);
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const author = await Author.create({
@@ -44,30 +39,16 @@ class AuthorService {
    */
   async login(data) {
     const { email, password } = data;
-    if (!email || !password) {
-      res.status(400);
-      throw new Error("All fileds are mandatory");
-    }
+    this.validateLoginData(data);
+    const author = this.findAuthorByEmail(email);
 
-    const author = await Author.findOne({ email });
-    if (author && (await bcrypt.compare(password, author.password))) {
-      const token = jwt.sign(
-        {
-          author: {
-            name: author.name,
-            email: author.email,
-            age: author.age,
-            id: author.id,
-          },
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "10m" }
-      );
-      return token;
-    } else {
+    if (!author && !(await bcrypt.compare(password, author.password))) {
       res.status(401);
       throw new Error("Invalid Credentials");
     }
+
+    const token = this.generateToken(author, password);
+    return token;
   }
 
   /**
@@ -77,17 +58,30 @@ class AuthorService {
    * @desc Shows the Profile of the author with author's books
    */
   async profile(req) {
-    const { email } = req.body;
-    const author = await Author.findOne({ email }).populate({
-      path: "books",
-      select: ["bookname", "pages"],
-    });
+    try {
+      // Find author by email
+      const author = await this.findAuthorByEmail(email);
 
-    if (author.id === req.author.id) {
+      // Check if author exists
+      if (!author) {
+        throw new Error("Author not found");
+      }
+
+      // Check if authorized to access profile
+      if (author.id !== req.author.id) {
+        throw new Error("Cannot access other author's profile");
+      }
+
+      // Populate the books array
+      await author.populate({
+        path: "books",
+        select: ["bookname", "pages"],
+      }).execPopulate();
+
+      // Return the populated author object
       return author;
-    } else {
-      res.status(400);
-      throw new Error("Author not found or Cannot access other Author's Profile");
+    } catch (error) {
+      throw error;
     }
   }
 }
