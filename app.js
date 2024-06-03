@@ -3,6 +3,7 @@ const connectDB = require('./config/dbConnection');
 const errorHandler = require('./app/middlewares/errorHandler');
 const authRoutes = require('./app/components/author/author.routes');
 const bookRoutes = require('./app/components/book/book.routes');
+const ResponseService = require('./helper/response.service');
 require('dotenv').config();
 
 const app = express();
@@ -12,9 +13,11 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/book', bookRoutes);
 
-app.use(errorHandler);
-
-
+// app.use(errorHandler);
+app.use((req, res , next) => {
+    res.responseService = ResponseService;
+    next();
+})
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`\nServer is listening on port ${PORT}`);
