@@ -59,6 +59,7 @@ class AuthorService extends AuthControllerFunctions {
    */
   async profile(req) {
     try {
+      const { email } = req.body;
       // Find author by email
       const author = await this.findAuthorByEmail(email);
 
@@ -67,16 +68,12 @@ class AuthorService extends AuthControllerFunctions {
         throw new Error("Author not found");
       }
 
-      // Check if authorized to access profile
-      if (author.id !== req.author.id) {
-        throw new Error("Cannot access other author's profile");
-      }
-
       // Populate the books array
       await author.populate({
         path: "books",
         select: ["bookname", "pages"],
-      }).execPopulate();
+      });
+      await author.save();
 
       // Return the populated author object
       return author;

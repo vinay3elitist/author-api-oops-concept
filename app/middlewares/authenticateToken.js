@@ -6,11 +6,12 @@ const authenticateAuthor = (req, res, next) => {
     res.status(401).json({ message: "No token provided" });
   }
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, data) {
+    if(err){
       return res.status(403).json({ message: "Invalid Token" });
     }
-    req.author = decoded.author;
+    console.log("🚀 ~ data:", data)
+    req.author = data.author;
     next();
   });
 };
